@@ -3,11 +3,14 @@ import { Text, View } from '@/components/Themed';
 import { useEffect, useState } from 'react';
 import { storage } from '../services/storage';
 import { addColor, getColors } from '../services/db';
-import { Color } from '../models/item';
+import * as schema from '../../db/schema';
+import { useORM } from '../services/orm';
 
 export default function Storage() {
   const [name, setName] = useState<string>("");
-  const [colors, setColors] = useState<Color[]>([]);
+  const [colors, setColors] = useState<schema.Color[]>([]);
+
+  const { addColor, getColors } = useORM();
 
   useEffect(() => {
     loadData();
@@ -18,9 +21,9 @@ export default function Storage() {
     setName(await storage.load("color") ?? "");
   }
   const loadColors = async () => {
+    // setColors(await getColors() ?? []);
     setColors(await getColors() ?? []);
   }
-
 
   return (
     <View style={styles.container}>
@@ -30,13 +33,14 @@ export default function Storage() {
       <TextInput placeholder='Enter name' value={name} onChangeText={setName} />
       <Button title="Save" onPress={async () => {
         await storage.save("color", name)
+        // await addColor(name);
         await addColor(name);
         loadColors();
       }}></Button>
 
       <FlatList
         data={colors}
-        renderItem={(i) => <Text>[{i.item.id}] - {i.item.value}</Text>}
+        renderItem={(i) => <Text>[{i.item.id}] - {i.item.name}</Text>}
         keyExtractor={(i) => i.id.toString()} />
     </View>
   );

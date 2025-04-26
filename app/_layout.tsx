@@ -3,12 +3,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import 'react-native-reanimated';
-import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite';
+import { SQLiteProvider, openDatabaseSync } from 'expo-sqlite';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { migrateDbIfNeeded } from './services/db';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { ActivityIndicator } from 'react-native';
+import migrations from '../drizzle/migrations';
+import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -47,17 +50,35 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+export const DATABASE_NAME = 'colors';
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
+  useEffect(() => {
+    runMigrations();
+  }, []);
+
+  const expoDb = openDatabaseSync(DATABASE_NAME);
+  const db = drizzle(expoDb);
+
+  async function runMigrations() {
+    await migrate(db, migrations);
+  }
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <SQLiteProvider databaseName="colors.db" onInit={migrateDbIfNeeded}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-      </SQLiteProvider>
+      <Suspense fallback={<ActivityIndicator size="large" />}>
+        <SQLiteProvider
+          databaseName={DATABASE_NAME}
+          options={{ enableChangeListener: true }}
+          useSuspense>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          </Stack>
+        </SQLiteProvider>
+      </Suspense>
     </ThemeProvider>
   );
 }

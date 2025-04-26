@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
-import { Color } from '../models/item';
 import { SQLiteDatabase } from 'expo-sqlite';
+import { Color } from '../models/item';
 
 const db = SQLite.openDatabaseSync('colors.db');
 
